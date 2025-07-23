@@ -32,9 +32,9 @@ function renderProducts(products) {
 }
 
 async function init() {
+  populateGenreSelect();
   const products = await getProducts();
   renderProducts(products);
-  populateGenreSelect();
 }
 
 init();
