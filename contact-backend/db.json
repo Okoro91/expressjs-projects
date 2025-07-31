@@ -1,0 +1,44 @@
+{
+  "users": [
+    {
+      "id": "1",
+      "name": "Okoro"
+    },
+    {
+      "id": "2",
+      "name": "Salam"
+    },
+    {
+      "id": "3",
+      "name": "Maryam"
+    },
+    {
+      "id": "4",
+      "name": "Adams"
+    },
+    {
+      "id": "5",
+      "name": "Shukrah"
+    },
+    {
+      "id": "6",
+      "name": "Kamila"
+    },
+    {
+      "id": "7",
+      "name": "iradah"
+    },
+    {
+      "id": "8",
+      "name": "Anas"
+    },
+    {
+      "id": "9",
+      "name": "Anifah"
+    },
+    {
+      "id": "10",
+      "name": "aminae"
+    }
+  ]
+}
