@@ -1,98 +1,131 @@
 import express from "express";
 import cors from "cors";
-import fs from "fs";
-import path from "path";
+
+import connectDB from "./config/db.js";
+import User from "./models/User.js";
 
 const app = express();
-const PORT = 3001;
-const dbPath = path.resolve("./db.json");
+const PORT = process.env.PORT || 3001;
+
+connectDB();
 
 app.use(cors());
 app.use(express.json());
 
-const readDb = () => {
+app.get("/users", async (req, res) => {
   try {
-    const dbData = fs.readFileSync(dbPath, "utf8");
-    return JSON.parse(dbData);
-  } catch (error) {
-    console.error("Error reading db.json:", error);
-    return { users: [] };
+    const Users = await User.find();
+    res.json(Users);
+  } catch (err) {
+    console.error(err);
   }
-};
-
-const writeDb = (data) => {
-  fs.writeFileSync(dbPath, JSON.stringify(data, null, 2), "utf8");
-};
-
-app.get("/users", (req, res) => {
-  const db = readDb();
-  res.json(db.users);
 });
 
-app.post("/users", (req, res) => {
-  const db = readDb();
-  const { users } = db;
-  const { name } = req.body;
+app.post("/users", async (req, res) => {
+  const { name, email, phone, location, dateOfBirth } = req.body;
 
-  if (!name) {
-    return res.status(400).json({ error: "Name is required" });
+  if (!name || !email || !phone) {
+    return res
+      .status(400)
+      .json({ error: "Name, Email, and Phone are required" });
   }
 
-  const nextId =
-    users.length > 0 ? Math.max(...users.map((u) => parseInt(u.id))) + 1 : 1;
-
-  const newUser = {
-    id: String(nextId),
-    name: name,
-  };
-
-  db.users.push(newUser);
-
-  writeDb(db);
-
-  res.status(201).json(newUser);
+  try {
+    const newUser = new User({
+      name,
+      email,
+      phone,
+      location,
+      dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
+    });
+    await newUser.save();
+    res.status(201).json(newUser);
+  } catch (err) {
+    console.error(err.message);
+    if (err.code === 11000) {
+      return res.status(400).json({ error: "Email already exists." });
+    }
+    if (err.name === "ValidationError") {
+      let errors = {};
+      Object.keys(err.errors).forEach((key) => {
+        errors[key] = err.errors[key].message;
+      });
+      return res.status(400).json({ errors });
+    }
+    res.status(500).send("Server Error");
+  }
 });
 
-app.put("/users/:id", (req, res) => {
+app.put("/users/:id", async (req, res) => {
   const { id } = req.params;
-  const { name } = req.body;
+  const { name, email, phone, location, dateOfBirth } = req.body;
 
-  if (!name) {
-    return res.status(400).json({ error: "Name is required for update" });
+  const updateFields = {};
+  if (name !== undefined) updateFields.name = name;
+  if (email !== undefined) updateFields.email = email;
+  if (phone !== undefined) updateFields.phone = phone;
+  if (location !== undefined) updateFields.location = location;
+  if (dateOfBirth !== undefined)
+    updateFields.dateOfBirth = new Date(dateOfBirth);
+
+  if (!name && !email && !phone) {
+    return res.status(400).json({
+      error:
+        "At least one field (name, email, or phone) is required for update.",
+    });
   }
-  const db = readDb();
-  let { users } = db;
 
-  const userIndex = users.findIndex((user) => user.id === id);
+  try {
+    const updatedUser = await User.findByIdAndUpdate(id, updateFields, {
+      new: true,
+      runValidators: true,
+    });
 
-  if (userIndex === -1) {
-    return res.status(404).json({ error: "User not found" });
+    if (!updatedUser) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    console.log(`PUT /users/${id} - Updated user to:`, updatedUser);
+    res.json(updatedUser);
+  } catch (err) {
+    console.error(err.message);
+
+    if (err.code === 11000) {
+      return res.status(400).json({ error: "Email already exists." });
+    }
+    if (err.name === "CastError" && err.path === "_id") {
+      return res.status(400).json({ msg: "Invalid user ID format" });
+    }
+    if (err.name === "ValidationError") {
+      let errors = {};
+      Object.keys(err.errors).forEach((key) => {
+        errors[key] = err.errors[key].message;
+      });
+      return res.status(400).json({ errors });
+    }
+    res.status(500).send("Server Error");
   }
-
-  users[userIndex].name = name;
-  writeDb(db);
-
-  console.log(`PUT /users/${id} - Updated user to:`, db.users[userIndex]);
-  res.json(users[userIndex]);
 });
 
-app.delete("/users/:id", (req, res) => {
+app.delete("/users/:id", async (req, res) => {
   const { id } = req.params;
 
-  const db = readDb();
-  let { users } = db;
-  const initialLength = users.length;
+  try {
+    const deletedUser = await User.findByIdAndDelete(id);
 
-  db.users = users.filter((user) => user.id !== id);
+    if (!deletedUser) {
+      return res.status(404).json({ error: "User not found" });
+    }
 
-  if (db.users.length === initialLength) {
-    return res.status(404).json({ error: "User not found" });
+    console.log(`DELETE /users/${id} - User deleted`);
+    res.status(204).send();
+  } catch (err) {
+    console.error(err.message);
+    if (err.kind === "ObjectId") {
+      return res.status(400).json({ msg: "Invalid user ID" });
+    }
+    res.status(500).send("Server Error");
   }
-
-  writeDb(db);
-
-  console.log(`DELETE /users/${id} - User deleted`);
-  res.status(204).send();
 });
 
 app.listen(PORT, () => {
