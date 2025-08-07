@@ -2,6 +2,7 @@ import express from "express";
 import dotenv from "dotenv";
 import { dbConnect } from "./config/dbconnect.js";
 import authRoutes from "./routes/authRoutes.js";
+import userRoutes from "./routes/userRoutes.js";
 
 dotenv.config();
 
@@ -17,6 +18,7 @@ app.get("/", (req, res) => {
 });
 
 app.use("/api/auth", authRoutes);
+app.use("/api/user", userRoutes);
 
 app.use((req, res) => {
   res.status(404).json({ message: "Route not found" });

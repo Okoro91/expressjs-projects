@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { FaUserPlus, FaEdit, FaTrashAlt, FaSave, FaBan } from "react-icons/fa";
+
 const App = () => {
   const [users, setUsers] = useState([]);
 
