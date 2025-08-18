@@ -1,6 +1,8 @@
 import express from "express";
 import mongoose from "mongoose";
 import router from "./routes/userRoute.js";
+import dotenv from "dotenv";
+dotenv.config();
 
 const app = express();
 
@@ -14,10 +16,7 @@ app.get("/", (req, res) => {
 
 app.use("/api/users", router);
 
-const MONGO_URL =
-  "mongodb+srv://mistore:miokoro@store.ueaufps.mongodb.net/?retryWrites=true&w=majority&appName=store";
-
-mongoose.connect(MONGO_URL).then(() => {
+mongoose.connect(process.env.MONGO_URL).then(() => {
   console.log("mongodb connected successfully");
   app.listen(PORT, () => console.log(`Server is running on port ${PORT}`));
 });
